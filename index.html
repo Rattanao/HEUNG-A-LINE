@@ -8,10 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --blue: #2f6489;
-  --blue-dark: #27546f;
-  --orange: #f28c28;
-  --active: #ecdcc6;
+  --blue: #1f3f94;
+  --blue-dark: #17306f;
+  --orange: #1f3f94;
+  --red: #d8262c;
+  --foot-h: 34px;
+  --active: #dfe7f7;
   --bg: #ffffff;
   --text: #2b2b2b;
   --muted: #6b7680;
@@ -25,21 +27,21 @@ body { margin: 0; font-family: "Sarabun", Tahoma, sans-serif; font-size: 15px; c
 button { font: inherit; color: inherit; }
 
 /* แถบบน */
-.topbar { height: var(--top-h); background: var(--blue); color: #fff; display: flex; align-items: center; gap: 14px; padding: 0 18px; }
+.topbar { height: var(--top-h); background: #fff; color: #fff; display: flex; align-items: center; gap: 14px; padding: 0 0 0 18px; border-bottom: 1px solid var(--line); }
 .burger { background: none; border: 0; padding: 8px; cursor: pointer; border-radius: 6px; display: grid; place-items: center; }
-.burger:hover { background: rgba(255,255,255,.12); }
-.burger svg { width: 22px; height: 22px; stroke: #fff; }
-.brand { display: flex; align-items: flex-end; gap: 8px; line-height: 1; user-select: none; }
-.brand .logo { display: grid; }
-.brand .logo small { color: var(--orange); font-weight: 700; font-size: 15px; letter-spacing: 1px; }
-.brand .logo b { color: var(--orange); font-size: 30px; font-weight: 700; letter-spacing: 1px; }
-.brand .tag { color: var(--orange); font-size: 10px; line-height: 1.25; padding-bottom: 4px; }
-.top-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-.pill { background: var(--orange); color: #fff; border-radius: 999px; padding: 6px 16px; font-weight: 600; font-size: 13px; white-space: nowrap; }
-.user { font-weight: 600; white-space: nowrap; }
+.burger:hover { background: #eef1f8; }
+.burger svg { width: 22px; height: 22px; stroke: var(--blue-dark); }
+.brand { display: flex; align-items: center; gap: 8px; line-height: 1; user-select: none; }
+.brand svg { width: 46px; height: 46px; flex: none; }
+.brand .name { display: grid; gap: 4px; }
+.brand .name b { color: var(--blue); font-size: 22px; font-weight: 700; letter-spacing: -.3px; white-space: nowrap; }
+.brand .name small { color: #222; font-size: 12px; letter-spacing: 3px; white-space: nowrap; }
+.top-right { margin-left: auto; align-self: stretch; display: flex; align-items: center; gap: 14px; background: var(--blue); padding: 0 26px; }
+.pill { color: #fff; padding: 6px 0; font-weight: 600; font-size: 13px; white-space: nowrap; }
 
 /* โครงหน้า */
-.layout { display: flex; height: calc(100% - var(--top-h)); }
+.layout { display: flex; height: calc(100% - var(--top-h) - var(--foot-h)); }
+.foot { height: var(--foot-h); background: var(--blue); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0 12px; font-size: 13px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .side { width: var(--side-w); flex: none; border-right: 1px solid var(--line); overflow-y: auto; padding: 16px 8px 24px; transition: margin-left .2s; background: #fff; }
 body.side-closed .side { margin-left: calc(var(--side-w) * -1); }
 
@@ -54,7 +56,7 @@ body.side-closed .side { margin-left: calc(var(--side-w) * -1); }
 .group.closed .items { display: none; }
 .items { margin: 10px 0 18px; display: grid; gap: 2px; }
 .item { display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 999px; text-decoration: none; color: var(--text); font-size: 14px; }
-.item:hover { background: #f4eee5; }
+.item:hover { background: #eef2fb; }
 .item.active { background: var(--active); }
 .item svg { width: 19px; height: 19px; flex: none; stroke: var(--orange); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .item.active svg { stroke: var(--blue-dark); }
@@ -69,10 +71,12 @@ body.side-closed .side { margin-left: calc(var(--side-w) * -1); }
 .card iframe[hidden] { display: none; }
 
 @media (max-width: 760px) {
-  .side { position: fixed; top: var(--top-h); bottom: 0; left: 0; z-index: 10; box-shadow: 2px 0 10px rgba(0,0,0,.18); }
+  .side { position: fixed; top: var(--top-h); bottom: var(--foot-h); left: 0; z-index: 10; box-shadow: 2px 0 10px rgba(0,0,0,.18); }
   .main { padding: 16px; }
   .crumb { font-size: 20px; margin-bottom: 14px; }
-  .pill, .brand .tag { display: none; }
+  .top-right, .brand .name small { display: none; }
+  :root { --foot-h: 44px; }
+  .foot { font-size: 11.5px; white-space: normal; line-height: 1.3; }
 }
 </style>
 </head>
@@ -82,13 +86,23 @@ body.side-closed .side { margin-left: calc(var(--side-w) * -1); }
   <button class="burger" id="burger" aria-label="เปิด/ปิดเมนู">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
   </button>
-  <div class="brand">
-    <div class="logo"><small>EDI</small><b>TOOLS</b></div>
-    <div class="tag">Paperless.<br>Effortless.</div>
+  <div class="brand" aria-label="Heung A Line">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <defs><clipPath id="lc"><circle cx="24" cy="24" r="22"/></clipPath></defs>
+      <circle cx="24" cy="24" r="22" fill="#d8262c"/>
+      <g clip-path="url(#lc)">
+        <rect x="0" y="29" width="48" height="20" fill="#fff"/>
+        <rect x="0" y="31" width="48" height="3.2" fill="#1f3f94"/>
+        <rect x="0" y="36.4" width="48" height="3.2" fill="#1f3f94"/>
+        <rect x="0" y="41.8" width="48" height="3.2" fill="#1f3f94"/>
+      </g>
+      <circle cx="24" cy="24" r="22" fill="none" stroke="#1f3f94" stroke-width="1.5"/>
+      <text x="24" y="24.5" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="15" fill="#f6c443">HAL</text>
+    </svg>
+    <div class="name"><b>HEUNG A LINE</b><small>興亞 LINE 株式會社</small></div>
   </div>
   <div class="top-right">
     <span class="pill">ประมวลผลในเบราว์เซอร์ ไม่มีการอัปโหลดไฟล์</span>
-    <span class="user">รัตนา หมุดแหละ</span>
   </div>
 </header>
 
@@ -107,6 +121,8 @@ body.side-closed .side { margin-left: calc(var(--side-w) * -1); }
     <div class="card" id="card"></div>
   </main>
 </div>
+
+<footer class="foot">EDI Verification Project by Ms. Rattana Mudlae (Fah) · Position Doc. Inbound</footer>
 
 <script>
 const ICON = {
