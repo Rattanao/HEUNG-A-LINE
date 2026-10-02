@@ -130,7 +130,8 @@ const ICON = {
   clock: '<circle cx="12" cy="13" r="7"/><path d="M12 9v4l2.5 2M9 3h6"/>',
   swap:  '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   cut:   '<circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/>',
-  temp:  '<path d="M10 14V5a2 2 0 014 0v9a4 4 0 11-4 0z"/><path d="M12 10v6"/>'
+  temp:  '<path d="M10 14V5a2 2 0 014 0v9a4 4 0 11-4 0z"/><path d="M12 10v6"/>',
+  doc:   '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>'
 };
 const GROUPS = [
   { name: "ตรวจสอบเอกสาร", tools: [
@@ -141,6 +142,9 @@ const GROUPS = [
     { id: "change-status", title: "Change Status MMAN", desc: "MMAN × STATUS → MMAN_EDI.txt", src: "tools/change-status.html", icon: "swap" },
     { id: "mman-vn",       title: "MMAN VN",            desc: "ตัด B/L + Change Status → MMAN_VN.txt", src: "tools/mman-vn.html", icon: "cut" },
     { id: "temp",          title: "Revised Temp",       desc: "แก้อุณหภูมิตู้เย็นในไฟล์ CLIST (.txt)", src: "tools/temp.html", icon: "temp" }
+  ]},
+  { name: "ใบสั่งปล่อยสินค้า (D/O)", tools: [
+    { id: "do", title: "DO", desc: "เติมวันเริ่มเก็บค่า DEM / ค่าไฟ / SPECIAL CONTAINER ลงในใบ D/O (.pdf)", src: "tools/do.html", icon: "doc" }
   ]}
 ];
 const TOOLS = GROUPS.flatMap(g => g.tools.map(t => ({ ...t, group: g.name })));

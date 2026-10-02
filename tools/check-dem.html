@@ -94,7 +94,7 @@
     <div class="chips" id="chips"></div>
     <div class="toolbar">
       <input type="search" id="search" placeholder="ค้นหา B/L No. / Consignee / Freedays">
-      <button id="download">ดาวน์โหลด Check DEM.xlsx</button>
+      <button id="download">ดาวน์โหลด CHECK DEM.xlsx</button>
     </div>
     <div class="tbl"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   </section>
@@ -103,14 +103,15 @@
 
 <script>
 const TOS_EXTRA_DAYS = 3;
-const OUTPUT_NAME = "Check DEM.xlsx";
-// SUR form: A POL | B Status | C B/L No. | D Freedays | E RECEIPT B/L | F Consignee
-// -> use only columns C-F and save as CHECK DEM.xlsx (same as check_dem.py --cols C-F --name "CHECK DEM")
-const SUR = { first: 2, last: 5, outName: "CHECK DEM.xlsx" };
-const isSurForm = h => /^pol$/i.test(h[0] || "") && /^status$/i.test(h[1] || "") && /freedays/i.test(h[3] || "");
+const OUTPUT_NAME = "CHECK DEM.xlsx";
+// Source forms vary: the needed headings are found by name, not by column position (same as check_dem.py).
+// Other headings (POL, STATUS ...) are ignored; the report always comes out in the same form.
+const FREEDAYS = /free\s*days?/i;
+const FIELDS = [["TPSZ", /tp\s*sz/i], ["B/L No.", /b\s*\/?\s*l\s*no/i], ["RECEIPT B/L", /receipt/i], ["Consignee", /consignee/i]];
+const REEFER = /^\s*R/i;   // TPSZ starting with R (e.g. R40Hx1) = reefer = always TOS 3
 const NAVY = "1F3864", LINE = "BFBFBF";
 const $ = id => document.getElementById(id);
-let src = null;      // {name, header, rows, outName}
+let src = null;      // {name, header, rows}
 let report = null;   // computed result
 const hidden = new Set();
 
@@ -150,19 +151,17 @@ function loadFile(file) {
       const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
-      let header = (aoa[0] || []).map(h => String(h).trim());
-      if (!header.some(h => /freedays/i.test(h))) throw new Error("ไม่พบคอลัมน์ Freedays ในแถวแรกของไฟล์");
-      let body = aoa.slice(1);
-      const sur = isSurForm(header);
-      if (sur) {
-        const cut = r => Array.from({ length: SUR.last - SUR.first + 1 }, (_, i) => r[SUR.first + i] ?? "");
-        header = cut(header).map(h => String(h).trim());
-        body = body.map(cut);
-      }
-      const rows = body.filter(r => r.some(v => String(v).trim() !== ""));
-      src = { name: file.name, header, rows, outName: sur ? SUR.outName : OUTPUT_NAME };
-      $("dropText").innerHTML = `<b>${escapeHtml(file.name)}</b> · ${rows.length} B/L` +
-        (sur ? " · แบบฟอร์ม SUR (คอลัมน์ C-F)" : "") + " (คลิกเพื่อเปลี่ยนไฟล์)";
+      // header row = first row that has a Freedays heading (not necessarily row 1)
+      const hRow = aoa.slice(0, 30).findIndex(r => r.some(h => FREEDAYS.test(String(h))));
+      if (hRow < 0) throw new Error("ไม่พบหัวข้อ Freedays ในไฟล์");
+      const head = aoa[hRow].map(h => String(h).trim());
+      const cFree = head.findIndex(h => FREEDAYS.test(h));
+      const fields = FIELDS.map(([name, re]) => [name, head.findIndex(h => re.test(h))]).filter(f => f[1] >= 0);
+      const header = ["Freedays", ...fields.map(f => f[0])];
+      const rows = aoa.slice(hRow + 1).filter(r => r.some(v => String(v).trim() !== ""))
+        .map(r => [r[cFree], ...fields.map(f => r[f[1]])].map(v => String(v ?? "").trim()));
+      src = { name: file.name, header, rows };
+      $("dropText").innerHTML = `<b>${escapeHtml(file.name)}</b> · ${rows.length} B/L (คลิกเพื่อเปลี่ยนไฟล์)`;
       update();
     } catch (err) {
       src = null; $("msg").textContent = "อ่านไฟล์ไม่ได้: " + err.message; update();
@@ -178,18 +177,20 @@ function update() { $("run").disabled = !(src && $("ata").value); }
 function compute() {
   const [y, m, d] = $("ata").value.split("-").map(Number);
   const ata = new Date(Date.UTC(y, m - 1, d));
-  const cFree = src.header.findIndex(h => /freedays/i.test(h));
-  const others = src.header.map((_, i) => i).filter(i => i !== cFree);
+  const cFree = 0, cTpsz = src.header.indexOf("TPSZ");
+  const others = src.header.map((_, i) => i).filter(i => i !== cFree && i !== cTpsz);
+  const hasTpsz = cTpsz >= 0;   // TPSZ goes right after No.; later columns shift by one
   const data = src.rows.map((r, idx) => {
     const fd = String(r[cFree] ?? "").trim();
     const days = freeDays(fd);
     const dem = days === null ? null : addDays(ata, days);
-    const tos = r.some(v => /\bTOS\b/i.test(String(v)));
+    const tos = r.some(v => /\bTOS\b/i.test(String(v))) || (cTpsz >= 0 && REEFER.test(r[cTpsz]));
     return { no: idx + 1, fd, days, dem, rec: tos ? addDays(ata, TOS_EXTRA_DAYS) : null,
-             rest: others.map(i => String(r[i] ?? "").trim()) };
+             tpsz: hasTpsz ? [r[cTpsz]] : [], rest: others.map(i => String(r[i] ?? "").trim()) };
   });
   const colors = palette(data.filter(x => x.dem).map(x => ymd(x.dem)));
-  report = { ata, data, colors, header: ["No.", "REC.", "TOTAL", "Freedays", "DEM.", ...others.map(i => src.header[i])], name: src.name, outName: src.outName };
+  report = { ata, data, colors, header: ["No.", ...(hasTpsz ? ["TPSZ"] : []), "REC.", "TOTAL", "Freedays", "DEM.", ...others.map(i => src.header[i])],
+             off: hasTpsz ? 1 : 0, name: src.name };
   hidden.clear(); $("search").value = "";
   render();
 }
@@ -208,25 +209,24 @@ function render() {
   const counts = {};
   data.forEach(x => { if (x.dem) counts[ymd(x.dem)] = (counts[ymd(x.dem)] || 0) + 1; });
   $("chips").innerHTML = Object.keys(counts).sort().map(k =>
-    `<span class="chip ${hidden.has(k) ? "off" : ""}" data-k="${k}" style="background:#${colors[k]}" title="คลิกเพื่อซ่อน/แสดง">DEM ${k}<small>${counts[k]} B/L</small></span>`).join("");
+    `<span class="chip ${hidden.has(k) ? "off" : ""}" data-k="${k}" style="background:#${colors[k]}" title="คลิกเพื่อซ่อน/แสดง">DEM ${k.split("-").reverse().join("/")}<small>${counts[k]} B/L</small></span>`).join("");
 
   $("thead").innerHTML = "<tr>" + header.map(h => `<th>${escapeHtml(h)}</th>`).join("") + "</tr>";
   const q = $("search").value.trim().toLowerCase();
   $("tbody").innerHTML = data.filter(x => {
     if (x.dem && hidden.has(ymd(x.dem))) return false;
-    return !q || [x.fd, ...x.rest].join(" ").toLowerCase().includes(q);
+    return !q || [x.fd, ...x.tpsz, ...x.rest].join(" ").toLowerCase().includes(q);
   }).map(x => {
     const bg = x.dem ? `style="background:#${colors[ymd(x.dem)]}"` : "";
     const rest = x.rest.map((v, i) => {
-      const h = header[5 + i];
+      const h = header[5 + report.off + i];
       const cls = /receipt/i.test(h) ? "receipt" : /consignee/i.test(h) ? "l" : "";
       return `<td class="${cls}">${escapeHtml(v)}</td>`;
     }).join("");
-    return `<tr class="${x.rec ? "tos" : ""}"><td>${x.no}</td><td class="${x.rec ? "rec" : ""}">${x.rec ? dmy(x.rec) : ""}</td>` +
+    return `<tr class="${x.rec ? "tos" : ""}"><td>${x.no}</td>${x.tpsz.map(v => `<td>${escapeHtml(v)}</td>`).join("")}<td class="${x.rec ? "rec" : ""}">${x.rec ? dmy(x.rec) : ""}</td>` +
       `<td class="b">${x.days ?? ""}</td><td class="l fd" ${bg}>${escapeHtml(x.fd)}</td>` +
-      (x.dem ? `<td class="b" ${bg}>${ymd(x.dem)}</td>` : `<td class="bad">CHECK</td>`) + `${rest}</tr>`;
+      (x.dem ? `<td class="b" ${bg}>${dmy(x.dem)}</td>` : `<td class="bad">CHECK</td>`) + `${rest}</tr>`;
   }).join("");
-  $("download").textContent = "ดาวน์โหลด " + report.outName;
   $("result").classList.remove("hidden");
 }
 
@@ -252,14 +252,15 @@ async function download() {
   t.value = "CHECK DEM"; t.font = { name: FONT, size: 16, bold: true, color: { argb: "FFFFFFFF" } };
   t.fill = fill(NAVY); t.alignment = center; ws.getRow(1).height = 30;
 
-  const info = [["ต้นฉบับ", name], ["ATA", new Date(ata)], ["จำนวน B/L", data.length]];
-  info.forEach(([k, v], i) => {
-    const a = ws.getCell(2, 1 + i * 2), b = ws.getCell(2, 2 + i * 2);
-    a.value = k; a.font = { name: FONT, bold: true, color: { argb: "FF" + NAVY } }; a.fill = fill("D9E1F2"); a.alignment = left;
-    b.value = v; b.font = { name: FONT, bold: k === "ATA", size: k === "ATA" ? 12 : 10 };
-    b.alignment = k === "ATA" ? center : left;
+  // info row: count at the left | source under Freedays-DEM. | ATA in the last two columns
+  const info = [["จำนวน B/L", data.length, 1], ["ต้นฉบับ", name, 4 + report.off], ["ATA", new Date(ata), ncol - 1]];
+  for (let col = 1; col <= ncol; col++) ws.getCell(2, col).border = box;
+  info.forEach(([k, v, col]) => {
+    const a = ws.getCell(2, col), b = ws.getCell(2, col + 1);
+    a.value = k; a.font = { name: FONT, bold: true }; a.fill = fill("BDD7EE"); a.alignment = center;
+    b.value = v; b.font = { name: FONT, bold: k !== "จำนวน B/L", size: k === "ATA" ? 12 : 10 };
+    b.fill = fill("DDEBF7"); b.alignment = center;
     if (k === "ATA") b.numFmt = "DD/MM/YYYY";
-    a.border = box; b.border = box;
   });
   ws.getRow(2).height = 22;
 
@@ -274,26 +275,27 @@ async function download() {
   data.forEach((x, n) => {
     const row = hr + 1 + n;
     ws.getRow(row).height = 20;
-    const values = [x.no, x.rec ? new Date(x.rec) : null, x.days, x.fd, x.dem ? new Date(x.dem) : "CHECK", ...x.rest];
+    const k = report.off;
+    const values = [x.no, ...x.tpsz, x.rec ? new Date(x.rec) : null, x.days, x.fd, x.dem ? new Date(x.dem) : "CHECK", ...x.rest];
     const stripe = fill(n % 2 ? "F7F9FC" : "FFFFFF");
     values.forEach((v, i) => {
       const c = ws.getCell(row, i + 1);
       c.value = v === "" ? null : v; c.font = { name: FONT }; c.fill = stripe; c.border = box;
       c.alignment = ["Consignee", "Freedays"].includes(header[i]) ? left : center;
     });
-    ws.getCell(row, 3).font = { name: FONT, bold: true };
-    const dc = ws.getCell(row, 5);
-    dc.numFmt = "YYYY-MM-DD"; dc.font = { name: FONT, bold: true };
+    ws.getCell(row, 3 + k).font = { name: FONT, bold: true };
+    const dc = ws.getCell(row, 5 + k);
+    dc.numFmt = "DD/MM/YYYY"; dc.font = { name: FONT, bold: true };
     if (x.dem) {
-      dc.fill = fill(colors[ymd(x.dem)]); ws.getCell(row, 4).fill = fill(colors[ymd(x.dem)]);
+      dc.fill = fill(colors[ymd(x.dem)]); ws.getCell(row, 4 + k).fill = fill(colors[ymd(x.dem)]);
     } else {
       dc.fill = fill("FF0000"); dc.font = { name: FONT, bold: true, color: { argb: "FFFFFFFF" } };
     }
-    const rc = ws.getCell(row, 2);
+    const rc = ws.getCell(row, 2 + k);
     rc.numFmt = "DD/MM/YYYY";
     if (x.rec) {
       rc.font = { name: FONT, bold: true, color: { argb: "FFC00000" } }; rc.fill = fill("FCE4D6");
-      ws.getCell(row, 4).font = { name: FONT, bold: true, color: { argb: "FFC00000" } };
+      ws.getCell(row, 4 + k).font = { name: FONT, bold: true, color: { argb: "FFC00000" } };
     }
     header.forEach((h, i) => {
       if (/receipt/i.test(h)) {
@@ -322,7 +324,7 @@ async function download() {
   const buf = await wb.xlsx.writeBuffer();
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-  a.download = report.outName;
+  a.download = OUTPUT_NAME;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<style>
+  :root {
+    --navy: #1f3864; --navy-soft: #d9e1f2; --bg: #f3f5f9; --card: #ffffff;
+    --text: #1d2433; --muted: #5b6474; --line: #d5dae3; --stripe: #f7f9fc;
+    --red: #c00000;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Sarabun", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--navy); color: #fff; padding: 18px 16px; }
+  header .wrap { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: 1px; }
+  header p { margin: 0; opacity: .8; font-size: 15px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  main { padding: 20px 16px 40px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+  .inputs { display: grid; grid-template-columns: 1fr 1fr 130px auto; gap: 14px; align-items: end; }
+  @media (max-width: 820px) { .inputs { grid-template-columns: 1fr; } }
+  label.t { display: block; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .drop { border: 2px dashed #9aa8c3; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; background: #fafbfd; transition: .15s; }
+  .drop.over { background: var(--navy-soft); border-color: var(--navy); }
+  .drop b { color: var(--navy); }
+  input[type=number] { width: 100%; font: inherit; font-size: 17px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
+  button { font: inherit; font-weight: 600; font-size: 16px; border: 0; border-radius: 8px; padding: 12px 20px; cursor: pointer; background: var(--navy); color: #fff; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .rules { font-size: 14px; color: var(--muted); margin: 12px 0 0; line-height: 1.6; }
+  .rules code { background: var(--navy-soft); color: var(--navy); padding: 1px 6px; border-radius: 4px; }
+  .msg { color: var(--red); font-weight: 600; margin-top: 10px; }
+  .info { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+  .info div { padding: 8px 14px; border-right: 1px solid var(--line); }
+  .info .k { background: var(--navy-soft); color: var(--navy); font-weight: 700; }
+  .info .ata { font-weight: 700; font-size: 18px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { border-radius: 999px; padding: 6px 14px; font-weight: 600; border: 1px solid rgba(0,0,0,.08); cursor: pointer; user-select: none; }
+  .chip.off { opacity: .35; }
+  .chip small { font-weight: 400; margin-left: 6px; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .toolbar input { font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 240px; flex: 1; }
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th { background: var(--navy); color: #fff; padding: 10px 8px; position: sticky; top: 0; white-space: nowrap; }
+  td { padding: 7px 10px; border-top: 1px solid var(--line); white-space: nowrap; text-align: center; }
+  tbody tr { cursor: pointer; }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+  tbody tr.sel td { background: var(--navy-soft) !important; }
+  td.l { text-align: left; }
+  td.b { font-weight: 700; }
+  td.kind { font-weight: 700; }
+  td.bad { background: #ff0000 !important; color: #fff; font-weight: 700; }
+  .preview { margin-top: 14px; text-align: center; }
+  .preview canvas { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+  .preview p { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+  .hidden { display: none; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding-bottom: 24px; }
+  footer a { color: var(--navy); }
+</style>
+<script>if(window.self!==window.top){document.documentElement.classList.add("embedded");document.documentElement.setAttribute("data-theme","light");}</script><style>html.embedded body>header,html.embedded body>footer{display:none!important}html.embedded body{background:#fff!important}html.embedded main{max-width:none!important;padding:18px 20px 28px!important}html.embedded .wrap{max-width:none!important}</style>
+</head>
+<body>
+<header><div class="wrap"><h1>DO</h1><p>เติมวันเริ่มเก็บค่า DEM / ค่าไฟ / SPECIAL CONTAINER ลงในใบ D/O</p></div></header>
+
+<main class="wrap">
+  <section class="card">
+    <div class="inputs">
+      <div>
+        <label class="t">ไฟล์ DO (.pdf)</label>
+        <div class="drop" id="dropPdf"><span id="pdfText">ลากไฟล์มาวาง หรือ <b>คลิกเพื่อเลือกไฟล์</b></span></div>
+        <input type="file" id="filePdf" accept=".pdf" class="hidden">
+      </div>
+      <div>
+        <label class="t">ไฟล์ CHECK DEM (.xlsx)</label>
+        <div class="drop" id="dropXls"><span id="xlsText">ลากไฟล์มาวาง หรือ <b>คลิกเพื่อเลือกไฟล์</b></span></div>
+        <input type="file" id="fileXls" accept=".xlsx,.xls" class="hidden">
+      </div>
+      <div>
+        <label class="t" for="size">ขนาดตัวหนังสือ</label>
+        <input type="number" id="size" value="15.5" min="8" max="24" step="0.5">
+      </div>
+      <button id="run" disabled>เติมข้อความ</button>
+    </div>
+    <p class="rules">
+      <b>ทุกใบ</b> เริ่มเก็บค่า DEM. วันที่ ·
+      <b>DG</b> (<code>UN</code> / <code>CLASS</code>) เพิ่ม SPECIAL CONTAINER ·
+      <b>ตู้เย็น</b> (<code>20RF</code> / <code>40RH</code> / <code>TEMP</code>) เพิ่มวันเริ่มเก็บค่าไฟ ·
+      <b>ISO TANK + DG</b> เติมแค่ SPECIAL CONTAINER<br>
+      วันที่ DEM = ช่อง DEM. · วันที่ค่าไฟ = ช่อง REC. (ถ้าว่างใช้ ATA + 3 วัน) · ลากไฟล์ทั้งสองมาวางพร้อมกันได้<br>
+      ไฟล์ถูกประมวลผลในเบราว์เซอร์ของคุณเท่านั้น ไม่มีการอัปโหลดไปที่ใด
+    </p>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <section class="card hidden" id="result">
+    <div class="info" id="info"></div>
+    <div class="chips" id="chips"></div>
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="ค้นหา B/L No. / วันที่">
+      <button id="download">ดาวน์โหลด DO.pdf</button>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>หน้า</th><th>B/L No.</th><th>แบบ</th><th>ค่าไฟ</th><th>DEM.</th><th>ข้อความที่เติม</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+    <div class="preview hidden" id="preview"><p id="previewText"></p><canvas id="canvas"></canvas></div>
+  </section>
+</main>
+<footer><a href="https://github.com/Rattanao/DO">github.com/Rattanao/DO</a></footer>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const OUTPUT_NAME = "DO.pdf";
+const REEFER_POWER_DAYS = 3;          // REC. blank in CHECK DEM -> ATA + 3 days
+const X = 46;                         // left edge of the notes, pt
+const SCALE = 6;                      // canvas px per pt (notes are embedded as images so Thai is shaped by the browser)
+// same rules as scripts/fill_do.py
+const RE_BL = /HASL\w+/;
+const RE_DG = /\bUN\s*(NO\.?)?\s*:?\s*\d{4}\b|\bCLASS\s*:?\s*\d|\bCL\s*\d/;
+const RE_REEFER = /\b(20|40|45)R[FH]|\bTEMP\b/;
+const RE_TANK = /ISO\s*TANK|\b\d\dTK\b/;
+const KINDS = { "ทั่วไป": "DDEBF7", "DG": "FFE0B2", "REEFER": "C8E6C9", "REEFER+DG": "E1BEE7", "ISO TANK+DG": "FFCDD2", "ข้าม": "E0E0E0" };
+const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const SPECIAL = [[["SPECIAL CONTAINER", false]], [[".......DG..........OP..........FR", false]]];
+const $ = id => document.getElementById(id);
+let pdfFile = null, xlsFile = null;   // {name, bytes}
+let report = null;                    // {rows, ata, out, name}
+const hidden = new Set();
+
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+const fmt = d => `${pad(d.getUTCDate())}-${MON[d.getUTCMonth()]}-${d.getUTCFullYear()}`;
+const dmy = d => `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+const addDays = (d, n) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + n));
+function toDate(v) {                  // Excel serial -> UTC date; anything else (blank, "CHECK") -> null
+  if (typeof v !== "number") return null;
+  const p = XLSX.SSF.parse_date_code(v);
+  return p ? new Date(Date.UTC(p.y, p.m - 1, p.d)) : null;
+}
+
+// ---------- read CHECK DEM ----------
+function readCheckDem(bytes) {
+  const wb = XLSX.read(bytes, { type: "array" });
+  const grid = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
+  const norm = v => String(v ?? "").trim();
+  const h = grid.findIndex(r => r.some(v => norm(v) === "B/L No."));
+  if (h < 0) throw new Error("ไม่พบหัวข้อ B/L No. ในไฟล์ CHECK DEM");
+  const col = name => grid[h].findIndex(v => norm(v) === name);
+  const cBl = col("B/L No."), cRec = col("REC."), cDem = col("DEM.");
+  if (cDem < 0) throw new Error("ไม่พบหัวข้อ DEM. ในไฟล์ CHECK DEM");
+  let ata = null;
+  for (const r of grid.slice(0, h)) { const i = r.findIndex(v => norm(v) === "ATA"); if (i >= 0) ata = toDate(r[i + 1]); }
+  const rows = {};
+  for (const r of grid.slice(h + 1)) if (norm(r[cBl])) rows[norm(r[cBl])] = { rec: cRec >= 0 ? toDate(r[cRec]) : null, dem: toDate(r[cDem]) };
+  return { ata, rows };
+}
+
+// ---------- note image ----------
+function fontFamily() {               // Angsana New when installed (Windows), otherwise Sarabun at a matching visual size
+  const c = document.createElement("canvas").getContext("2d"), t = "เริ่มเก็บค่า DEM.";
+  c.font = 'bold 40px "Angsana New", monospace'; const a = c.measureText(t).width;
+  c.font = "bold 40px monospace";
+  return a !== c.measureText(t).width ? { css: '"Angsana New"', k: 1 } : { css: "Sarabun", k: .68 };
+}
+// lines = [[ [text, underline], ... ], ...]  ->  {png, w, h} in pt; first baseline at .9 * size below the top
+function noteImage(lines, size, fam) {
+  const lineH = 1.05 * size, font = `bold ${size * fam.k * SCALE}px ${fam.css}, Sarabun, Tahoma`;
+  const m = document.createElement("canvas").getContext("2d"); m.font = font;
+  const w = Math.max(...lines.map(l => m.measureText(l.map(s => s[0]).join("")).width)) / SCALE + 4;
+  const h = lines.length * lineH + .5 * size;
+  const cv = document.createElement("canvas"); cv.width = Math.ceil(w * SCALE); cv.height = Math.ceil(h * SCALE);
+  const c = cv.getContext("2d"); c.font = font; c.fillStyle = "#000"; c.textBaseline = "alphabetic";
+  lines.forEach((l, i) => {
+    let x = 0; const y = (.9 * size + i * lineH) * SCALE;
+    for (const [text, underline] of l) {
+      const tw = c.measureText(text).width;
+      c.fillText(text, x, y);
+      if (underline) c.fillRect(x, y + .13 * size * SCALE, tw, .05 * size * SCALE);
+      x += tw;
+    }
+  });
+  return { png: cv.toDataURL("image/png"), w, h };
+}
+
+// ---------- fill ----------
+async function fill(pdfBytes, xlsBytes, size) {
+  const { ata, rows } = readCheckDem(xlsBytes);
+  await document.fonts.load("700 20px Sarabun", "เริ่ม");
+  const fam = fontFamily();
+  const src = await pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise;
+  const doc = await PDFLib.PDFDocument.load(pdfBytes);
+  const cache = new Map(), out = [];
+  for (let n = 1; n <= src.numPages; n++) {
+    const p = await src.getPage(n);
+    const text = (await p.getTextContent()).items.map(i => i.str).join("\n");
+    const bl = (text.match(RE_BL) || ["?"])[0];
+    if ((await p.getAnnotations()).some(a => a.subtype === "FreeText")) {
+      out.push({ page: n, bl, kind: "ข้าม", note: "มีข้อความอยู่แล้ว" }); continue;
+    }
+    const row = rows[bl] || {}, dem = row.dem || null;
+    const dg = RE_DG.test(text), reefer = RE_REEFER.test(text), tank = RE_TANK.test(text);
+    const demLine = dem ? [[["เริ่มเก็บค่า DEM. วันที่.  ", false], [fmt(dem) + " ", true]]] : null;
+    let kind, parts, rec = null;
+    if (tank && dg) { kind = "ISO TANK+DG"; parts = [[700, SPECIAL]]; }
+    else if (reefer) {
+      rec = row.rec || (ata ? addDays(ata, REEFER_POWER_DAYS) : null);
+      const recLine = rec ? [[["เริ่มเก็บค่าไฟวันที่  ", false], [" " + fmt(rec) + " ", true]]] : null;
+      kind = "REEFER"; parts = [[704, recLine], [740, demLine]];
+      if (dg) { kind = "REEFER+DG"; parts = [[684, SPECIAL], ...parts.map(([y, l]) => [y + 20, l])]; }
+    }
+    else if (dg) { kind = "DG"; parts = [[690, SPECIAL], [760, demLine]]; }
+    else { kind = "ทั่วไป"; parts = [[728, demLine]]; }
+    const page = doc.getPage(n - 1), H = page.getHeight();
+    for (const [y, lines] of parts) {
+      if (!lines) continue;
+      const key = JSON.stringify(lines);
+      if (!cache.has(key)) { const im = noteImage(lines, size, fam); cache.set(key, { ...im, ref: await doc.embedPng(im.png) }); }
+      const im = cache.get(key);
+      page.drawImage(im.ref, { x: X, y: H - y - im.h, width: im.w, height: im.h });
+    }
+    const missing = kind !== "ISO TANK+DG" && !dem;
+    out.push({ page: n, bl, kind, rec, dem, missing, inSheet: bl in rows,
+               note: parts.filter(p => p[1]).map(p => p[1].map(l => l.map(s => s[0]).join("").trim()).join(" ")).join(" / ") });
+  }
+  return { rows: out, ata, out: await doc.save(), font: fam.css.replace(/"/g, "") };
+}
+
+// ---------- render ----------
+function render() {
+  const { rows, ata, name, font } = report;
+  const bad = rows.filter(x => x.missing).length;
+  $("info").innerHTML =
+    `<div class="k">ต้นฉบับ</div><div>${escapeHtml(name)}</div>` +
+    `<div class="k">ATA</div><div class="ata">${ata ? dmy(ata) : "-"}</div>` +
+    `<div class="k">จำนวนหน้า</div><div>${rows.length}</div>` +
+    `<div class="k">ฟอนต์</div><div>${escapeHtml(font)}</div>` +
+    (bad ? `<div class="k" style="color:var(--red)">ไม่มีวันที่ DEM</div><div style="color:var(--red);font-weight:700">${bad}</div>` : "");
+  const counts = {};
+  rows.forEach(x => counts[x.kind] = (counts[x.kind] || 0) + 1);
+  $("chips").innerHTML = Object.keys(KINDS).filter(k => counts[k]).map(k =>
+    `<span class="chip ${hidden.has(k) ? "off" : ""}" data-k="${k}" style="background:#${KINDS[k]}" title="คลิกเพื่อซ่อน/แสดง">${k}<small>${counts[k]} หน้า</small></span>`).join("");
+  const q = $("search").value.trim().toLowerCase();
+  $("tbody").innerHTML = rows.filter(x => !hidden.has(x.kind) && (!q || (x.bl + " " + x.note).toLowerCase().includes(q))).map(x =>
+    `<tr data-p="${x.page}"><td>${x.page}</td><td class="b">${escapeHtml(x.bl)}</td>` +
+    `<td class="kind" style="background:#${KINDS[x.kind]}">${x.kind}</td><td>${x.rec ? fmt(x.rec) : ""}</td>` +
+    (x.missing ? `<td class="bad">${x.inSheet ? "CHECK" : "ไม่พบ B/L"}</td>` : `<td class="b">${x.dem && x.kind !== "ISO TANK+DG" ? fmt(x.dem) : ""}</td>`) +
+    `<td class="l">${escapeHtml(x.note)}</td></tr>`).join("");
+  $("result").classList.remove("hidden");
+}
+
+async function preview(n) {
+  const doc = await pdfjsLib.getDocument({ data: report.out.slice() }).promise;
+  const page = await doc.getPage(n), vp = page.getViewport({ scale: 1.5 });
+  const cv = $("canvas"); cv.width = vp.width; cv.height = vp.height;
+  await page.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+  $("previewText").textContent = `ตัวอย่างหน้า ${n}`;
+  $("preview").classList.remove("hidden");
+  document.querySelectorAll("#tbody tr").forEach(tr => tr.classList.toggle("sel", +tr.dataset.p === n));
+}
+
+async function run() {
+  $("msg").textContent = ""; $("run").disabled = true; $("run").textContent = "กำลังเติม...";
+  try {
+    report = { ...(await fill(pdfFile.bytes, xlsFile.bytes, parseFloat($("size").value) || 15.5)), name: pdfFile.name };
+    hidden.clear(); $("search").value = ""; render();
+    await preview(1);
+  } catch (err) {
+    $("msg").textContent = "ทำไม่สำเร็จ: " + err.message;
+  }
+  $("run").textContent = "เติมข้อความ"; update();
+}
+
+function download() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([report.out], { type: "application/pdf" }));
+  a.download = OUTPUT_NAME;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---------- events ----------
+function update() { $("run").disabled = !(pdfFile && xlsFile); }
+async function take(files) {
+  for (const f of files) {
+    const item = { name: f.name, bytes: new Uint8Array(await f.arrayBuffer()) };
+    const label = `<b>${escapeHtml(f.name)}</b> (คลิกเพื่อเปลี่ยนไฟล์)`;
+    if (/\.pdf$/i.test(f.name)) { pdfFile = item; $("pdfText").innerHTML = label; }
+    else if (/\.xlsx?$/i.test(f.name)) { xlsFile = item; $("xlsText").innerHTML = label; }
+    else $("msg").textContent = "ไฟล์นี้ใช้ไม่ได้: " + f.name;
+  }
+  update();
+}
+for (const [drop, input] of [["dropPdf", "filePdf"], ["dropXls", "fileXls"]]) {
+  const d = $(drop);
+  d.onclick = () => $(input).click();
+  $(input).onchange = e => take(e.target.files);
+  d.ondragover = e => { e.preventDefault(); d.classList.add("over"); };
+  d.ondragleave = () => d.classList.remove("over");
+  d.ondrop = e => { e.preventDefault(); d.classList.remove("over"); take(e.dataTransfer.files); };
+}
+$("run").onclick = run;
+$("search").oninput = render;
+$("download").onclick = download;
+$("chips").onclick = e => {
+  const k = e.target.closest(".chip")?.dataset.k; if (!k) return;
+  hidden.has(k) ? hidden.delete(k) : hidden.add(k); render();
+};
+$("tbody").onclick = e => { const tr = e.target.closest("tr"); if (tr) preview(+tr.dataset.p); };
+</script>
+</body>
+</html>
