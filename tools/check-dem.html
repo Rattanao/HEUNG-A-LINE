@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check DEM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root {
+    --navy: #1f3864; --navy-soft: #d9e1f2; --bg: #f3f5f9; --card: #ffffff;
+    --text: #1d2433; --muted: #5b6474; --line: #d5dae3; --stripe: #f7f9fc;
+    --red: #c00000; --receipt: #fff2cc; --rec: #fce4d6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Sarabun", Tahoma, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--navy); color: #fff; padding: 18px 16px; }
+  header .wrap { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: 1px; }
+  header p { margin: 0; opacity: .8; font-size: 15px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  main { padding: 20px 16px 40px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 18px; }
+  .inputs { display: grid; grid-template-columns: 1fr 220px auto; gap: 14px; align-items: end; }
+  @media (max-width: 720px) { .inputs { grid-template-columns: 1fr; } }
+  label.t { display: block; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+  .drop { border: 2px dashed #9aa8c3; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; background: #fafbfd; transition: .15s; }
+  .drop.over { background: var(--navy-soft); border-color: var(--navy); }
+  .drop b { color: var(--navy); }
+  input[type=date] { width: 100%; font: inherit; font-size: 17px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; }
+  button { font: inherit; font-weight: 600; font-size: 16px; border: 0; border-radius: 8px; padding: 12px 20px; cursor: pointer; background: var(--navy); color: #fff; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.ghost { background: #fff; color: var(--navy); border: 1px solid var(--navy); }
+  .rules { font-size: 14px; color: var(--muted); margin: 12px 0 0; line-height: 1.6; }
+  .rules code { background: var(--navy-soft); color: var(--navy); padding: 1px 6px; border-radius: 4px; }
+  .msg { color: var(--red); font-weight: 600; margin-top: 10px; }
+  .info { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+  .info div { padding: 8px 14px; border-right: 1px solid var(--line); }
+  .info .k { background: var(--navy-soft); color: var(--navy); font-weight: 700; }
+  .info .ata { font-weight: 700; font-size: 18px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { border-radius: 999px; padding: 6px 14px; font-weight: 600; border: 1px solid rgba(0,0,0,.08); cursor: pointer; user-select: none; }
+  .chip.off { opacity: .35; }
+  .chip small { font-weight: 400; margin-left: 6px; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .toolbar input { font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 240px; flex: 1; }
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th { background: var(--navy); color: #fff; padding: 10px 8px; position: sticky; top: 0; white-space: nowrap; }
+  td { padding: 7px 10px; border-top: 1px solid var(--line); white-space: nowrap; text-align: center; }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+  td.l { text-align: left; }
+  td.b { font-weight: 700; }
+  td.receipt { background: var(--receipt) !important; color: var(--red); font-weight: 700; }
+  td.rec { background: var(--rec) !important; color: var(--red); font-weight: 700; }
+  tr.tos td.fd { color: var(--red); font-weight: 700; }
+  td.bad { background: #ff0000 !important; color: #fff; font-weight: 700; }
+  .hidden { display: none; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding-bottom: 24px; }
+  footer a { color: var(--navy); }
+</style>
+<script>if(window.self!==window.top){document.documentElement.classList.add("embedded");document.documentElement.setAttribute("data-theme","light");}</script><style>html.embedded body>header,html.embedded body>footer{display:none!important}html.embedded body{background:#fff!important}html.embedded main{max-width:none!important;padding:18px 20px 28px!important}html.embedded .wrap{max-width:none!important}</style>
+</head>
+<body>
+<header><div class="wrap"><h1>CHECK DEM</h1><p>หาวันเริ่มเก็บค่า DEM และวัน REC. จาก Freedays + ATA</p></div></header>
+
+<main class="wrap">
+  <section class="card">
+    <div class="inputs">
+      <div>
+        <label class="t">ไฟล์ Freedays (.xls / .xlsx)</label>
+        <div class="drop" id="drop"><span id="dropText">ลากไฟล์มาวาง หรือ <b>คลิกเพื่อเลือกไฟล์</b></span></div>
+        <input type="file" id="file" accept=".xls,.xlsx" class="hidden">
+      </div>
+      <div>
+        <label class="t" for="ata">ATA</label>
+        <input type="date" id="ata">
+      </div>
+      <button id="run" disabled>คำนวณ</button>
+    </div>
+    <p class="rules">
+      <b>TOTAL</b> = เลขตัวหน้า + เลขตัวหน้าหลัง Add (<code>7/5 Add 7/9</code> = 14) ·
+      <b>DEM.</b> = ATA + TOTAL ·
+      <b>REC.</b> = ATA + 3 วัน เฉพาะแถวที่มี <code>TOS</code><br>
+      ไฟล์ถูกประมวลผลในเบราว์เซอร์ของคุณเท่านั้น ไม่มีการอัปโหลดไปที่ใด
+    </p>
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <section class="card hidden" id="result">
+    <div class="info" id="info"></div>
+    <div class="chips" id="chips"></div>
+    <div class="toolbar">
+      <input type="search" id="search" placeholder="ค้นหา B/L No. / Consignee / Freedays">
+      <button id="download">ดาวน์โหลด Check DEM.xlsx</button>
+    </div>
+    <div class="tbl"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  </section>
+</main>
+<footer><a href="https://github.com/Rattanao/Check-dem">github.com/Rattanao/Check-dem</a></footer>
+
+<script>
+const TOS_EXTRA_DAYS = 3;
+const OUTPUT_NAME = "Check DEM.xlsx";
+// SUR form: A POL | B Status | C B/L No. | D Freedays | E RECEIPT B/L | F Consignee
+// -> use only columns C-F and save as CHECK DEM.xlsx (same as check_dem.py --cols C-F --name "CHECK DEM")
+const SUR = { first: 2, last: 5, outName: "CHECK DEM.xlsx" };
+const isSurForm = h => /^pol$/i.test(h[0] || "") && /^status$/i.test(h[1] || "") && /freedays/i.test(h[3] || "");
+const NAVY = "1F3864", LINE = "BFBFBF";
+const $ = id => document.getElementById(id);
+let src = null;      // {name, header, rows, outName}
+let report = null;   // computed result
+const hidden = new Set();
+
+// ---------- rules ----------
+function freeDays(text) {
+  const parts = String(text || "").split(/\badd\b/i).slice(0, 2);
+  let total = 0, found = false;
+  for (const p of parts) {
+    const m = p.match(/\d+/);
+    if (m) { total += parseInt(m[0], 10); found = true; }
+  }
+  return found ? total : null;
+}
+const addDays = (d, n) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + n));
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+const dmy = d => `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+
+// same palette as check_dem.py: hue 0 (red) -> 0.55 (blue), lightness .80, saturation .75
+function hlsToHex(h, l, s) {
+  const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = t => { t = (t + 1) % 1; return t < 1/6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2/3 ? p + (q - p) * (2/3 - t) * 6 : p; };
+  return [f(h + 1/3), f(h), f(h - 1/3)].map(v => Math.trunc(v * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+}
+function palette(keys) {
+  const list = [...new Set(keys)].sort(), n = list.length, out = {};
+  list.forEach((k, i) => out[k] = hlsToHex(n === 1 ? 0 : (i / (n - 1)) * .55, .80, .75));
+  return out;
+}
+
+// ---------- read file ----------
+function loadFile(file) {
+  $("msg").textContent = "";
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
+      let header = (aoa[0] || []).map(h => String(h).trim());
+      if (!header.some(h => /freedays/i.test(h))) throw new Error("ไม่พบคอลัมน์ Freedays ในแถวแรกของไฟล์");
+      let body = aoa.slice(1);
+      const sur = isSurForm(header);
+      if (sur) {
+        const cut = r => Array.from({ length: SUR.last - SUR.first + 1 }, (_, i) => r[SUR.first + i] ?? "");
+        header = cut(header).map(h => String(h).trim());
+        body = body.map(cut);
+      }
+      const rows = body.filter(r => r.some(v => String(v).trim() !== ""));
+      src = { name: file.name, header, rows, outName: sur ? SUR.outName : OUTPUT_NAME };
+      $("dropText").innerHTML = `<b>${escapeHtml(file.name)}</b> · ${rows.length} B/L` +
+        (sur ? " · แบบฟอร์ม SUR (คอลัมน์ C-F)" : "") + " (คลิกเพื่อเปลี่ยนไฟล์)";
+      update();
+    } catch (err) {
+      src = null; $("msg").textContent = "อ่านไฟล์ไม่ได้: " + err.message; update();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function update() { $("run").disabled = !(src && $("ata").value); }
+
+// ---------- compute ----------
+function compute() {
+  const [y, m, d] = $("ata").value.split("-").map(Number);
+  const ata = new Date(Date.UTC(y, m - 1, d));
+  const cFree = src.header.findIndex(h => /freedays/i.test(h));
+  const others = src.header.map((_, i) => i).filter(i => i !== cFree);
+  const data = src.rows.map((r, idx) => {
+    const fd = String(r[cFree] ?? "").trim();
+    const days = freeDays(fd);
+    const dem = days === null ? null : addDays(ata, days);
+    const tos = r.some(v => /\bTOS\b/i.test(String(v)));
+    return { no: idx + 1, fd, days, dem, rec: tos ? addDays(ata, TOS_EXTRA_DAYS) : null,
+             rest: others.map(i => String(r[i] ?? "").trim()) };
+  });
+  const colors = palette(data.filter(x => x.dem).map(x => ymd(x.dem)));
+  report = { ata, data, colors, header: ["No.", "REC.", "TOTAL", "Freedays", "DEM.", ...others.map(i => src.header[i])], name: src.name, outName: src.outName };
+  hidden.clear(); $("search").value = "";
+  render();
+}
+
+// ---------- render ----------
+function render() {
+  const { ata, data, colors, header, name } = report;
+  const bad = data.filter(x => !x.dem).length;
+  $("info").innerHTML =
+    `<div class="k">ต้นฉบับ</div><div>${escapeHtml(name)}</div>` +
+    `<div class="k">ATA</div><div class="ata">${dmy(ata)}</div>` +
+    `<div class="k">จำนวน B/L</div><div>${data.length}</div>` +
+    `<div class="k">มี TOS</div><div>${data.filter(x => x.rec).length}</div>` +
+    (bad ? `<div class="k" style="color:var(--red)">อ่านไม่ได้</div><div style="color:var(--red);font-weight:700">${bad}</div>` : "");
+
+  const counts = {};
+  data.forEach(x => { if (x.dem) counts[ymd(x.dem)] = (counts[ymd(x.dem)] || 0) + 1; });
+  $("chips").innerHTML = Object.keys(counts).sort().map(k =>
+    `<span class="chip ${hidden.has(k) ? "off" : ""}" data-k="${k}" style="background:#${colors[k]}" title="คลิกเพื่อซ่อน/แสดง">DEM ${k}<small>${counts[k]} B/L</small></span>`).join("");
+
+  $("thead").innerHTML = "<tr>" + header.map(h => `<th>${escapeHtml(h)}</th>`).join("") + "</tr>";
+  const q = $("search").value.trim().toLowerCase();
+  $("tbody").innerHTML = data.filter(x => {
+    if (x.dem && hidden.has(ymd(x.dem))) return false;
+    return !q || [x.fd, ...x.rest].join(" ").toLowerCase().includes(q);
+  }).map(x => {
+    const bg = x.dem ? `style="background:#${colors[ymd(x.dem)]}"` : "";
+    const rest = x.rest.map((v, i) => {
+      const h = header[5 + i];
+      const cls = /receipt/i.test(h) ? "receipt" : /consignee/i.test(h) ? "l" : "";
+      return `<td class="${cls}">${escapeHtml(v)}</td>`;
+    }).join("");
+    return `<tr class="${x.rec ? "tos" : ""}"><td>${x.no}</td><td class="${x.rec ? "rec" : ""}">${x.rec ? dmy(x.rec) : ""}</td>` +
+      `<td class="b">${x.days ?? ""}</td><td class="l fd" ${bg}>${escapeHtml(x.fd)}</td>` +
+      (x.dem ? `<td class="b" ${bg}>${ymd(x.dem)}</td>` : `<td class="bad">CHECK</td>`) + `${rest}</tr>`;
+  }).join("");
+  $("download").textContent = "ดาวน์โหลด " + report.outName;
+  $("result").classList.remove("hidden");
+}
+
+// ---------- export (same layout as check_dem.py) ----------
+async function download() {
+  const { ata, data, colors, header, name } = report;
+  const FONT = "Tahoma";
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Check DEM", {
+    views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
+    pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+                 horizontalCentered: true, margins: { left: .4, right: .4, top: .5, bottom: .5, header: .3, footer: .3 } },
+  });
+  const fill = c => ({ type: "pattern", pattern: "solid", fgColor: { argb: "FF" + c } });
+  const thin = { style: "thin", color: { argb: "FF" + LINE } };
+  const box = { left: thin, right: thin, top: thin, bottom: thin };
+  const center = { horizontal: "center", vertical: "middle" };
+  const left = { horizontal: "left", vertical: "middle", indent: 1 };
+  const ncol = header.length;
+
+  ws.mergeCells(1, 1, 1, ncol);
+  const t = ws.getCell(1, 1);
+  t.value = "CHECK DEM"; t.font = { name: FONT, size: 16, bold: true, color: { argb: "FFFFFFFF" } };
+  t.fill = fill(NAVY); t.alignment = center; ws.getRow(1).height = 30;
+
+  const info = [["ต้นฉบับ", name], ["ATA", new Date(ata)], ["จำนวน B/L", data.length]];
+  info.forEach(([k, v], i) => {
+    const a = ws.getCell(2, 1 + i * 2), b = ws.getCell(2, 2 + i * 2);
+    a.value = k; a.font = { name: FONT, bold: true, color: { argb: "FF" + NAVY } }; a.fill = fill("D9E1F2"); a.alignment = left;
+    b.value = v; b.font = { name: FONT, bold: k === "ATA", size: k === "ATA" ? 12 : 10 };
+    b.alignment = k === "ATA" ? center : left;
+    if (k === "ATA") b.numFmt = "DD/MM/YYYY";
+    a.border = box; b.border = box;
+  });
+  ws.getRow(2).height = 22;
+
+  const hr = 4;
+  ws.getRow(hr).height = 30;
+  header.forEach((h, i) => {
+    const c = ws.getCell(hr, i + 1);
+    c.value = h; c.font = { name: FONT, bold: true, color: { argb: "FFFFFFFF" } }; c.fill = fill(NAVY);
+    c.alignment = { horizontal: "center", vertical: "middle", wrapText: true }; c.border = box;
+  });
+
+  data.forEach((x, n) => {
+    const row = hr + 1 + n;
+    ws.getRow(row).height = 20;
+    const values = [x.no, x.rec ? new Date(x.rec) : null, x.days, x.fd, x.dem ? new Date(x.dem) : "CHECK", ...x.rest];
+    const stripe = fill(n % 2 ? "F7F9FC" : "FFFFFF");
+    values.forEach((v, i) => {
+      const c = ws.getCell(row, i + 1);
+      c.value = v === "" ? null : v; c.font = { name: FONT }; c.fill = stripe; c.border = box;
+      c.alignment = ["Consignee", "Freedays"].includes(header[i]) ? left : center;
+    });
+    ws.getCell(row, 3).font = { name: FONT, bold: true };
+    const dc = ws.getCell(row, 5);
+    dc.numFmt = "YYYY-MM-DD"; dc.font = { name: FONT, bold: true };
+    if (x.dem) {
+      dc.fill = fill(colors[ymd(x.dem)]); ws.getCell(row, 4).fill = fill(colors[ymd(x.dem)]);
+    } else {
+      dc.fill = fill("FF0000"); dc.font = { name: FONT, bold: true, color: { argb: "FFFFFFFF" } };
+    }
+    const rc = ws.getCell(row, 2);
+    rc.numFmt = "DD/MM/YYYY";
+    if (x.rec) {
+      rc.font = { name: FONT, bold: true, color: { argb: "FFC00000" } }; rc.fill = fill("FCE4D6");
+      ws.getCell(row, 4).font = { name: FONT, bold: true, color: { argb: "FFC00000" } };
+    }
+    header.forEach((h, i) => {
+      if (/receipt/i.test(h)) {
+        const c = ws.getCell(row, i + 1);
+        c.font = { name: FONT, bold: true, color: { argb: "FFC00000" } }; c.fill = fill("FFF2CC");
+      }
+    });
+  });
+
+  // column widths fit the longest text (info row + data); bold / larger fonts need more room
+  for (let col = 1; col <= ncol; col++) {
+    let longest = Math.max(...header[col - 1].split(/\s+/).map(w => w.length));
+    for (let row = 2; row <= hr + data.length; row++) {
+      if (row === hr) continue;
+      const c = ws.getCell(row, col);
+      if (c.value === null || c.value === undefined) continue;
+      const text = c.value instanceof Date ? dmy(c.value) : String(c.value);
+      const scale = ((c.font && c.font.size) || 10) / 10 * (c.font && c.font.bold ? 1.12 : 1);
+      longest = Math.max(longest, text.length * scale);
+    }
+    ws.getColumn(col).width = longest * 1.15 + 3;
+  }
+  ws.autoFilter = { from: { row: hr, column: 1 }, to: { row: hr + data.length, column: ncol } };
+  ws.pageSetup.printTitlesRow = `${hr}:${hr}`;
+
+  const buf = await wb.xlsx.writeBuffer();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  a.download = report.outName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ---------- events ----------
+const drop = $("drop");
+drop.onclick = () => $("file").click();
+$("file").onchange = e => e.target.files[0] && loadFile(e.target.files[0]);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && loadFile(e.dataTransfer.files[0]); };
+$("ata").oninput = update;
+$("run").onclick = compute;
+$("search").oninput = render;
+$("download").onclick = download;
+$("chips").onclick = e => {
+  const k = e.target.closest(".chip")?.dataset.k; if (!k) return;
+  hidden.has(k) ? hidden.delete(k) : hidden.add(k); render();
+};
+</script>
+</body>
+</html>

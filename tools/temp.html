@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Revised Temp</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: navy top bar, one working column — drop zone + action button, then summary chips and a change table */
+:root {
+  --navy: #1f3461;
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --fg: #1d2433;
+  --muted: #5d677a;
+  --line: #9aa6bd;
+  --soft: #e6eaf2;
+  --accent: #2c5bb8;
+  --btn-off: #a9b0bf;
+  --ok: #1e7a4c;
+  --ok-bg: #e3f3ea;
+  --warn: #9a6200;
+  --warn-bg: #fbf0da;
+  --font-body: "IBM Plex Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
+  --font-mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --navy: #16244a; --bg: #121722; --surface: #1a2130; --fg: #e3e8f2; --muted: #9aa5b8;
+    --line: #4a5670; --soft: #232c3e; --accent: #7fa6f0; --btn-off: #4a5162;
+    --ok: #6fd3a0; --ok-bg: #173327; --warn: #f0c070; --warn-bg: #3a2e14; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --navy: #16244a; --bg: #121722; --surface: #1a2130; --fg: #e3e8f2; --muted: #9aa5b8;
+  --line: #4a5670; --soft: #232c3e; --accent: #7fa6f0; --btn-off: #4a5162;
+  --ok: #6fd3a0; --ok-bg: #173327; --warn: #f0c070; --warn-bg: #3a2e14; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.topbar { background: var(--navy); color: #fff; padding: 14px 16px; }
+.topbar .in { max-width: 1040px; margin: 0 auto; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.topbar h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: .01em; }
+.topbar span { font-size: 13px; opacity: .75; }
+main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 22px; }
+label.head { font-weight: 600; font-size: 15px; }
+.row { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
+.drop {
+  flex: 1 1 420px; min-width: 0; border: 1.5px dashed var(--line); border-radius: 6px; background: var(--surface);
+  padding: 18px 16px; text-align: center; font-size: 16px; cursor: pointer; transition: background .15s, border-color .15s;
+}
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--soft); }
+.drop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.drop b { font-weight: 700; }
+.drop .fname { display: block; margin-top: 4px; font-family: var(--font-mono); font-size: 13px; color: var(--muted); word-break: break-all; }
+button.go {
+  flex: 0 0 auto; border: 0; border-radius: 6px; padding: 0 22px; min-height: 48px; font: 600 15px var(--font-body);
+  background: var(--navy); color: #fff; cursor: pointer;
+}
+button.go:disabled { background: var(--btn-off); cursor: not-allowed; }
+button.go:not(:disabled):hover { filter: brightness(1.2); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+.hint code, td code { font-family: var(--font-mono); }
+.msg { padding: 10px 14px; border-radius: 6px; font-size: 14px; }
+.msg.ok { background: var(--ok-bg); color: var(--ok); }
+.msg.warn { background: var(--warn-bg); color: var(--warn); }
+.panel { background: var(--surface); border: 1px solid var(--soft); border-radius: 8px; padding: 18px 16px; display: grid; gap: 14px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.panel-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.tag { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--warn-bg); color: var(--warn); font-weight: 500; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font-family: var(--font-mono); font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--soft); font-variant-numeric: tabular-nums; }
+.chip b { color: var(--accent); font-weight: 500; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--soft); white-space: nowrap; }
+th { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+td { font-variant-numeric: tabular-nums; }
+td.mono { font-family: var(--font-mono); }
+.old { color: var(--muted); text-decoration: line-through; }
+.new { color: var(--ok); font-weight: 500; }
+.skip { color: var(--warn); }
+button.save { border: 1px solid var(--navy); background: transparent; color: var(--fg); border-radius: 6px; padding: 8px 16px; font: 600 14px var(--font-body); cursor: pointer; }
+button.save:hover { background: var(--soft); }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+details summary { cursor: pointer; font-size: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<script>if(window.self!==window.top){document.documentElement.classList.add("embedded");document.documentElement.setAttribute("data-theme","light");}</script><style>html.embedded body>header,html.embedded body>footer{display:none!important}html.embedded body{background:#fff!important}html.embedded main{max-width:none!important;padding:18px 20px 28px!important}html.embedded .wrap{max-width:none!important}</style>
+</head>
+<body>
+
+<header class="topbar"><div class="in"><h1>Revised Temp</h1><span>แก้อุณหภูมิตู้เย็นในไฟล์ CLIST (.txt)</span></div></header>
+
+<main>
+  <section>
+    <label class="head" for="file">ไฟล์ CLIST (.txt)</label>
+    <div class="row" style="margin-top:8px">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-describedby="hint">
+        ลากไฟล์มาวางที่นี่ หรือ <b>คลิกเพื่อเลือกไฟล์</b>
+        <span class="fname" id="fname" hidden></span>
+      </div>
+      <button class="go" id="go" disabled>แก้ไขอุณหภูมิ</button>
+      <input type="file" id="file" accept=".txt,text/plain" hidden>
+    </div>
+    <p class="hint" id="hint">ตัดตัวเลขหลักสุดท้ายก่อน <code>C</code> ที่ตำแหน่ง 145 ออก 1 หลัก เช่น <code>S-20C → S-2C</code>, <code>S-180C → S-18C</code> แล้วเติมช่องว่างแทน ความยาวบรรทัดจึงเท่าเดิม ค่าหลักเดียว (<code>S0C</code>) และช่องว่าง (<code>S</code>) ไม่แก้ไข</p>
+  </section>
+
+  <div class="msg" id="msg" hidden></div>
+
+  <section class="panel" id="result">
+    <div class="panel-head">
+      <h2 id="rtitle">ผลการแก้ไข</h2>
+      <span class="tag" id="sampleTag">ตัวอย่าง</span>
+      <div class="btns"><button class="save" id="save" hidden>บันทึก Revised temp.txt</button><button class="save" id="saveXlsx" hidden>ดาวน์โหลด Excel</button></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>บรรทัด</th><th>เบอร์ตู้</th><th>Size/Type</th><th>เดิม</th><th>ใหม่</th></tr></thead>
+        <tbody id="changed"></tbody>
+      </table>
+    </div>
+    <details id="skipBox">
+      <summary id="skipSum"></summary>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>บรรทัด</th><th>เบอร์ตู้</th><th>Size/Type</th><th>อุณหภูมิ</th><th>เหตุผล</th></tr></thead>
+          <tbody id="skipped"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+const COL = 144; // 0-based start of temperature field (column 145)
+const $ = id => document.getElementById(id);
+let current = null; // {name, bytesIn}
+let output = null;  // Uint8Array
+let lastRes = null; // result shown in the table
+
+function toBin(u8) { let s = ""; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return s; }
+function fromBin(s) { const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255; return u; }
+
+function revise(text) {
+  const parts = text.split("\n");
+  const changed = [], skipped = [];
+  const out = parts.map((raw, i) => {
+    const cr = raw.endsWith("\r");
+    let l = cr ? raw.slice(0, -1) : raw;
+    if (l.length <= COL || l[COL] !== "S") return raw;
+    const m = /^S(-?)(\d*)C?/.exec(l.slice(COL, COL + 12));
+    const info = { line: i + 1, cntr: l.slice(0, 11).trim(), type: l.slice(133, 137).trim() };
+    if (!m[2]) { skipped.push({ ...info, temp: "S", why: "ไม่มีตัวเลข" }); return raw; }
+    if (m[2].length < 2) { skipped.push({ ...info, temp: m[0], why: "ตัวเลขหลักเดียว" }); return raw; }
+    const nu = "S" + m[1] + m[2].slice(0, -1) + "C";
+    l = l.slice(0, COL) + nu + " " + l.slice(COL + m[0].length);
+    changed.push({ ...info, old: m[0], nu });
+    return cr ? l + "\r" : l;
+  });
+  return { text: out.join("\n"), changed, skipped };
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function render(res, isSample) {
+  $("sampleTag").hidden = !isSample;
+  $("save").hidden = isSample || !res.changed.length;
+  $("saveXlsx").hidden = isSample || !(res.changed.length || res.skipped.length);
+  $("rtitle").textContent = isSample ? "ผลการแก้ไข (ข้อมูลตัวอย่าง)" : "ผลการแก้ไข";
+  const counts = {};
+  res.changed.forEach(r => { const k = r.old + " → " + r.nu; counts[k] = (counts[k] || 0) + 1; });
+  $("chips").innerHTML = `<span class="chip">แก้ไข <b>${res.changed.length}</b> บรรทัด</span>` +
+    Object.entries(counts).map(([k, n]) => `<span class="chip">${esc(k)} <b>×${n}</b></span>`).join("");
+  $("changed").innerHTML = res.changed.map(r =>
+    `<tr><td>${r.line}</td><td class="mono">${esc(r.cntr)}</td><td class="mono">${esc(r.type)}</td><td class="mono old">${esc(r.old)}</td><td class="mono new">${esc(r.nu)}</td></tr>`
+  ).join("") || `<tr><td colspan="5">ไม่พบค่าที่ต้องแก้ไข</td></tr>`;
+  $("skipBox").hidden = !res.skipped.length;
+  $("skipSum").textContent = `ไม่แก้ไข ${res.skipped.length} บรรทัด (S0C / ช่องว่าง)`;
+  $("skipped").innerHTML = res.skipped.map(r =>
+    `<tr><td>${r.line}</td><td class="mono">${esc(r.cntr)}</td><td class="mono">${esc(r.type)}</td><td class="mono skip">${esc(r.temp)}</td><td>${r.why}</td></tr>`
+  ).join("");
+}
+
+function showMsg(kind, text) { const m = $("msg"); m.className = "msg " + kind; m.textContent = text; m.hidden = false; }
+
+function pick(file) {
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    current = { name: file.name, bin: toBin(new Uint8Array(fr.result)) };
+    $("fname").textContent = file.name; $("fname").hidden = false;
+    $("go").disabled = false; $("msg").hidden = true;
+  };
+  fr.onerror = () => showMsg("warn", "อ่านไฟล์ไม่ได้ ลองเลือกไฟล์ใหม่อีกครั้ง");
+  fr.readAsArrayBuffer(file);
+}
+
+const drop = $("drop");
+drop.addEventListener("click", () => $("file").click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); } });
+$("file").addEventListener("change", e => pick(e.target.files[0]));
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => pick(e.dataTransfer.files[0]));
+
+$("go").addEventListener("click", () => {
+  if (!current) return;
+  const res = revise(current.bin);
+  output = fromBin(res.text);
+  lastRes = res;
+  render(res, false);
+  if (res.changed.length) showMsg("ok", `แก้ไข ${res.changed.length} บรรทัดจาก ${current.name} แล้ว กด "บันทึก Revised temp.txt" เพื่อเก็บไฟล์`);
+  else showMsg("warn", "ไม่พบค่าอุณหภูมิที่ต้องแก้ไขที่ตำแหน่ง 145 ตรวจสอบว่าเป็นไฟล์ CLIST ที่ถูกต้อง");
+});
+
+$("save").addEventListener("click", () => {
+  if (!output) return;
+  const url = URL.createObjectURL(new Blob([output], { type: "text/plain" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = "Revised temp.txt";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showMsg("ok", "บันทึก Revised temp.txt แล้ว (ดูในโฟลเดอร์ Downloads)");
+});
+
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Excel colours follow the page: navy header, green for new values, amber for skipped rows
+const XL = { navy: "FF1F3461", navySoft: "FFE6EAF2", zebra: "FFF6F8FB", line: "FFD5DBE7", muted: "FF5D677A",
+  ok: "FF1E7A4C", okBg: "FFE3F3EA", warn: "FF9A6200", warnBg: "FFFBF0DA", white: "FFFFFFFF" };
+const XFONT = "Tahoma";
+
+function xlSheet(wb, name, title, subtitle, head, rows, widths, style) {
+  const ws = wb.addWorksheet(name, {
+    views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
+    pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 } },
+    headerFooter: { oddFooter: "&L" + title + "&Rหน้า &P / &N" },
+  });
+  ws.columns = widths.map(w => ({ width: w }));
+  const n = head.length;
+  ws.mergeCells(1, 1, 1, n);
+  const t = ws.getCell(1, 1);
+  t.value = title; t.font = { name: XFONT, size: 16, bold: true, color: { argb: XL.white } };
+  t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XL.navy } };
+  t.alignment = { vertical: "middle", indent: 1 };
+  ws.getRow(1).height = 30;
+  ws.mergeCells(2, 1, 2, n);
+  const st = ws.getCell(2, 1);
+  st.value = subtitle; st.font = { name: XFONT, size: 10, color: { argb: XL.muted } };
+  st.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XL.navySoft } };
+  st.alignment = { vertical: "middle", indent: 1, wrapText: true };
+  ws.getRow(2).height = 22;
+  ws.getRow(3).height = 6;
+  const hr = ws.getRow(4);
+  hr.values = head; hr.height = 22;
+  hr.eachCell(c => {
+    c.font = { name: XFONT, size: 11, bold: true, color: { argb: XL.white } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: style.headBg } };
+    c.alignment = { horizontal: "center", vertical: "middle" };
+    c.border = { bottom: { style: "medium", color: { argb: XL.navy } } };
+  });
+  rows.forEach((vals, i) => {
+    const r = ws.getRow(5 + i);
+    r.values = vals; r.height = 19;
+    for (let col = 1; col <= n; col++) {
+      const c = r.getCell(col);
+      c.font = { name: col === 1 ? XFONT : "Consolas", size: 11 };
+      c.alignment = { horizontal: col === 1 || col >= 3 ? "center" : "left", vertical: "middle", indent: col === 2 ? 1 : 0 };
+      c.border = { bottom: { style: "thin", color: { argb: XL.line } } };
+      if (i % 2) c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XL.zebra } };
+    }
+    style.row && style.row(r);
+  });
+  if (!rows.length) {
+    ws.mergeCells(5, 1, 5, n);
+    const c = ws.getCell(5, 1);
+    c.value = "ไม่มีรายการ"; c.font = { name: XFONT, italic: true, color: { argb: XL.muted } };
+    c.alignment = { horizontal: "center" };
+  }
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: n } };
+  return ws;
+}
+
+$("saveXlsx").addEventListener("click", async () => {
+  if (!lastRes) return;
+  if (!window.ExcelJS) { showMsg("warn", "โหลดตัวสร้างไฟล์ Excel ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้า"); return; }
+  const res = lastRes, src = current ? current.name : "";
+  const now = new Date(), pad = x => String(x).padStart(2, "0");
+  const stamp = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Revised Temp"; wb.created = now;
+
+  const ws = xlSheet(wb, "ผลการแก้ไข", "Revised Temp — ผลการแก้ไขอุณหภูมิ",
+    `ไฟล์: ${src}   ·   วันที่: ${stamp}   ·   แก้ไข ${res.changed.length} บรรทัด   ·   ไม่แก้ไข ${res.skipped.length} บรรทัด`,
+    ["บรรทัด", "เบอร์ตู้", "Size/Type", "เดิม", "ใหม่"],
+    res.changed.map(r => [r.line, r.cntr, r.type, r.old, r.nu]),
+    [9, 18, 12, 12, 12],
+    { headBg: XL.navy, row: r => {
+        r.getCell(4).font = { name: "Consolas", size: 11, strike: true, color: { argb: XL.muted } };
+        const c = r.getCell(5);
+        c.font = { name: "Consolas", size: 11, bold: true, color: { argb: XL.ok } };
+        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XL.okBg } };
+      } });
+
+  // Summary by change type, to the right of the table
+  const counts = {};
+  res.changed.forEach(r => { const k = r.old + "|" + r.nu; counts[k] = (counts[k] || 0) + 1; });
+  ws.getColumn(7).width = 12; ws.getColumn(8).width = 12; ws.getColumn(9).width = 9;
+  const sh = ws.getRow(4);
+  ["เดิม", "ใหม่", "จำนวน"].forEach((v, i) => {
+    const c = sh.getCell(7 + i);
+    c.value = v; c.font = { name: XFONT, size: 11, bold: true, color: { argb: XL.navy } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XL.navySoft } };
+    c.alignment = { horizontal: "center", vertical: "middle" };
+    c.border = { bottom: { style: "medium", color: { argb: XL.navy } } };
+  });
+  const entries = Object.entries(counts);
+  entries.forEach(([k, n], i) => {
+    const [o, nu] = k.split("|"), r = ws.getRow(5 + i);
+    [o, nu, n].forEach((v, j) => {
+      const c = r.getCell(7 + j);
+      c.value = v; c.alignment = { horizontal: "center", vertical: "middle" };
+      c.border = { bottom: { style: "thin", color: { argb: XL.line } } };
+      c.font = { name: j === 2 ? XFONT : "Consolas", size: 11, bold: j === 1, color: { argb: j === 1 ? XL.ok : "FF1D2433" } };
+    });
+  });
+  const tr = ws.getRow(5 + entries.length);
+  tr.getCell(7).value = "รวม"; tr.getCell(9).value = res.changed.length;
+  [7, 8, 9].forEach(col => {
+    const c = tr.getCell(col);
+    c.font = { name: XFONT, size: 11, bold: true, color: { argb: XL.navy } };
+    c.alignment = { horizontal: "center" };
+    c.border = { top: { style: "medium", color: { argb: XL.navy } } };
+  });
+
+  xlSheet(wb, "ไม่แก้ไข", "Revised Temp — รายการที่ไม่แก้ไข",
+    `ไฟล์: ${src}   ·   ${res.skipped.length} บรรทัด (อุณหภูมิหลักเดียว เช่น S0C หรือไม่มีตัวเลข)`,
+    ["บรรทัด", "เบอร์ตู้", "Size/Type", "อุณหภูมิ", "เหตุผล"],
+    res.skipped.map(r => [r.line, r.cntr, r.type, r.temp, r.why]),
+    [9, 18, 12, 12, 20],
+    { headBg: XL.warn, row: r => {
+        r.getCell(4).font = { name: "Consolas", size: 11, bold: true, color: { argb: XL.warn } };
+        r.getCell(5).font = { name: XFONT, size: 10, color: { argb: XL.muted } };
+      } });
+
+  const buf = await wb.xlsx.writeBuffer();
+  download(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), "Revised temp.xlsx");
+  showMsg("ok", "บันทึก Revised temp.xlsx แล้ว (ดูในโฟลเดอร์ Downloads)");
+});
+
+// Example rows (made-up container numbers) so the page shows what it does before a file is chosen
+function sampleLine(cntr, type, temp) {
+  return (cntr.padEnd(18) + "0993000000000    0000  TAO       THLCHLCH                0000000").padEnd(133) + type + "  8  Q " + temp.padEnd(20) + "\r";
+}
+render(revise([
+  sampleLine("ABCU1000001", "45R1", "S-20C"),
+  sampleLine("ABCU1000002", "45R1", "S-180C"),
+  sampleLine("ABCU1000003", "45R1", "S50C"),
+  sampleLine("ABCU1000004", "45R1", "S0C"),
+  sampleLine("ABCU1000005", "45G0", "S"),
+].join("\n")), true);
+
+</script>
+</body>
+</html>

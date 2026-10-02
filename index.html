@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EDI Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue: #2f6489;
+  --blue-dark: #27546f;
+  --orange: #f28c28;
+  --active: #ecdcc6;
+  --bg: #ffffff;
+  --text: #2b2b2b;
+  --muted: #6b7680;
+  --line: #d9dee3;
+  --side-w: 258px;
+  --top-h: 64px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; font-family: "Sarabun", Tahoma, sans-serif; font-size: 15px; color: var(--text); background: var(--bg); overflow: hidden; }
+button { font: inherit; color: inherit; }
+
+/* แถบบน */
+.topbar { height: var(--top-h); background: var(--blue); color: #fff; display: flex; align-items: center; gap: 14px; padding: 0 18px; }
+.burger { background: none; border: 0; padding: 8px; cursor: pointer; border-radius: 6px; display: grid; place-items: center; }
+.burger:hover { background: rgba(255,255,255,.12); }
+.burger svg { width: 22px; height: 22px; stroke: #fff; }
+.brand { display: flex; align-items: flex-end; gap: 8px; line-height: 1; user-select: none; }
+.brand .logo { display: grid; }
+.brand .logo small { color: var(--orange); font-weight: 700; font-size: 15px; letter-spacing: 1px; }
+.brand .logo b { color: var(--orange); font-size: 30px; font-weight: 700; letter-spacing: 1px; }
+.brand .tag { color: var(--orange); font-size: 10px; line-height: 1.25; padding-bottom: 4px; }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.pill { background: var(--orange); color: #fff; border-radius: 999px; padding: 6px 16px; font-weight: 600; font-size: 13px; white-space: nowrap; }
+.user { font-weight: 600; white-space: nowrap; }
+
+/* โครงหน้า */
+.layout { display: flex; height: calc(100% - var(--top-h)); }
+.side { width: var(--side-w); flex: none; border-right: 1px solid var(--line); overflow-y: auto; padding: 16px 8px 24px; transition: margin-left .2s; background: #fff; }
+body.side-closed .side { margin-left: calc(var(--side-w) * -1); }
+
+.search { display: flex; align-items: center; border: 1px solid #555; border-radius: 999px; padding: 4px 10px 4px 14px; margin: 0 8px 22px; }
+.search input { border: 0; outline: 0; flex: 1; min-width: 0; font: inherit; font-size: 14px; background: none; }
+.search button { background: none; border: 0; padding: 2px 4px; cursor: pointer; display: grid; place-items: center; }
+.search svg { width: 18px; height: 18px; stroke: #111; stroke-width: 2.4; }
+
+.group-head { width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: 0; padding: 6px 12px; font-size: 16px; font-weight: 700; color: var(--blue-dark); cursor: pointer; }
+.group-head svg { width: 14px; height: 14px; stroke: var(--blue-dark); stroke-width: 3; transition: transform .15s; }
+.group.closed .group-head svg { transform: rotate(180deg); }
+.group.closed .items { display: none; }
+.items { margin: 10px 0 18px; display: grid; gap: 2px; }
+.item { display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 999px; text-decoration: none; color: var(--text); font-size: 14px; }
+.item:hover { background: #f4eee5; }
+.item.active { background: var(--active); }
+.item svg { width: 19px; height: 19px; flex: none; stroke: var(--orange); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.item.active svg { stroke: var(--blue-dark); }
+.item[hidden] { display: none; }
+.none { padding: 6px 14px; color: var(--muted); font-size: 14px; }
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 24px 28px 22px 34px; }
+.crumb { margin: 0 0 22px; font-size: 24px; font-weight: 400; color: #333; }
+.crumb small { display: block; font-size: 14px; color: var(--muted); margin-top: 2px; }
+.card { flex: 1; min-height: 0; border: 1.5px solid var(--blue); border-radius: 18px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.12); background: #fff; }
+.card iframe { width: 100%; height: 100%; border: 0; display: block; }
+.card iframe[hidden] { display: none; }
+
+@media (max-width: 760px) {
+  .side { position: fixed; top: var(--top-h); bottom: 0; left: 0; z-index: 10; box-shadow: 2px 0 10px rgba(0,0,0,.18); }
+  .main { padding: 16px; }
+  .crumb { font-size: 20px; margin-bottom: 14px; }
+  .pill, .brand .tag { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="burger" id="burger" aria-label="เปิด/ปิดเมนู">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <div class="brand">
+    <div class="logo"><small>EDI</small><b>TOOLS</b></div>
+    <div class="tag">Paperless.<br>Effortless.</div>
+  </div>
+  <div class="top-right">
+    <span class="pill">ประมวลผลในเบราว์เซอร์ ไม่มีการอัปโหลดไฟล์</span>
+    <span class="user">รัตนา หมุดแหละ</span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="side" id="side">
+    <div class="search">
+      <input id="q" type="text" placeholder="ค้นหาเครื่องมือ" autocomplete="off">
+      <button id="qClear" aria-label="ล้างคำค้นหา"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div id="menu"></div>
+    <div class="none" id="none" hidden>ไม่พบรายการ</div>
+  </nav>
+
+  <main class="main">
+    <h1 class="crumb" id="crumb"></h1>
+    <div class="card" id="card"></div>
+  </main>
+</div>
+
+<script>
+const ICON = {
+  check: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12l3 3 5-6"/>',
+  clock: '<circle cx="12" cy="13" r="7"/><path d="M12 9v4l2.5 2M9 3h6"/>',
+  swap:  '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
+  cut:   '<circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5L20 17M8 15.5L20 7"/>',
+  temp:  '<path d="M10 14V5a2 2 0 014 0v9a4 4 0 11-4 0z"/><path d="M12 10v6"/>'
+};
+const GROUPS = [
+  { name: "ตรวจสอบเอกสาร", tools: [
+    { id: "check-cntrs", title: "Check CNTRS", desc: "ตรวจเทียบ MANIFEST กับ CNTRS: SHED · STATUS · TEMP · VENT · DG · REMARK", src: "tools/check-cntrs.html", icon: "check" },
+    { id: "check-dem",   title: "Check DEM",   desc: "หาวันเริ่มเก็บค่า DEM และวัน REC. จาก Freedays + ATA", src: "tools/check-dem.html", icon: "clock" }
+  ]},
+  { name: "แก้ไขไฟล์ EDI", tools: [
+    { id: "change-status", title: "Change Status MMAN", desc: "MMAN × STATUS → MMAN_EDI.txt", src: "tools/change-status.html", icon: "swap" },
+    { id: "mman-vn",       title: "MMAN VN",            desc: "ตัด B/L + Change Status → MMAN_VN.txt", src: "tools/mman-vn.html", icon: "cut" },
+    { id: "temp",          title: "Revised Temp",       desc: "แก้อุณหภูมิตู้เย็นในไฟล์ CLIST (.txt)", src: "tools/temp.html", icon: "temp" }
+  ]}
+];
+const TOOLS = GROUPS.flatMap(g => g.tools.map(t => ({ ...t, group: g.name })));
+const $ = id => document.getElementById(id);
+
+$("menu").innerHTML = GROUPS.map(g => `
+  <div class="group">
+    <button class="group-head">${g.name}<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
+    <div class="items">${g.tools.map(t =>
+      `<a class="item" href="#${t.id}" data-id="${t.id}"><svg viewBox="0 0 24 24">${ICON[t.icon]}</svg>${t.title}</a>`).join("")}
+    </div>
+  </div>`).join("");
+
+document.querySelectorAll(".group-head").forEach(b =>
+  b.addEventListener("click", () => b.parentElement.classList.toggle("closed")));
+
+// เปิดเครื่องมือตาม hash; iframe ถูกสร้างครั้งเดียวแล้วซ่อน/แสดง เพื่อให้งานที่ทำค้างไว้ไม่หาย
+function show() {
+  const t = TOOLS.find(t => t.id === location.hash.slice(1)) || TOOLS[0];
+  $("crumb").innerHTML = `${t.group} › ${t.title}<small>${t.desc}</small>`;
+  document.title = t.title + " · EDI Tools";
+  document.querySelectorAll(".item").forEach(a => a.classList.toggle("active", a.dataset.id === t.id));
+  let frame = document.querySelector(`iframe[data-id="${t.id}"]`);
+  if (!frame) {
+    frame = document.createElement("iframe");
+    frame.dataset.id = t.id;
+    frame.title = t.title;
+    frame.src = t.src;
+    $("card").appendChild(frame);
+  }
+  document.querySelectorAll("#card iframe").forEach(f => f.hidden = f !== frame);
+  if (matchMedia("(max-width: 760px)").matches) document.body.classList.add("side-closed");
+}
+addEventListener("hashchange", show);
+
+$("burger").addEventListener("click", () => document.body.classList.toggle("side-closed"));
+
+function filter() {
+  const q = $("q").value.trim().toLowerCase();
+  let n = 0;
+  document.querySelectorAll(".item").forEach(a => {
+    const t = TOOLS.find(t => t.id === a.dataset.id);
+    const hit = !q || (t.title + " " + t.desc).toLowerCase().includes(q);
+    a.hidden = !hit;
+    if (hit) n++;
+  });
+  document.querySelectorAll(".group").forEach(g => {
+    g.hidden = !g.querySelector(".item:not([hidden])");
+    if (q) g.classList.remove("closed");
+  });
+  $("none").hidden = n > 0;
+}
+$("q").addEventListener("input", filter);
+$("qClear").addEventListener("click", () => { $("q").value = ""; filter(); $("q").focus(); });
+
+if (matchMedia("(max-width: 760px)").matches) document.body.classList.add("side-closed");
+show();
+</script>
+</body>
+</html>
